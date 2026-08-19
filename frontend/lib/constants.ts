@@ -1,4 +1,5 @@
 import { Task } from "@/types/task";
+import { Project } from "@/types/project";
 
 export const tasks: Task[] = [
   {
@@ -9,7 +10,7 @@ export const tasks: Task[] = [
     assignee: "Admin",
     assigneeInitial: "A",
     dueDate: "29 Jul",
-    labels: ["Deployment", "Deployment"],
+    labels: ["Deployment", "Documentation"],
   },
   {
     id: "2",
@@ -19,7 +20,7 @@ export const tasks: Task[] = [
     assignee: "Admin",
     assigneeInitial: "A",
     dueDate: "29 Jul",
-    labels: ["Deployment", "Deployment"],
+    labels: ["Frontend", "Search"],
   },
   {
     id: "3",
@@ -29,9 +30,8 @@ export const tasks: Task[] = [
     assignee: "Admin",
     assigneeInitial: "A",
     dueDate: "29 Jul",
-    labels: ["Deployment", "Deployment"],
+    labels: ["Deployment"],
   },
-
   {
     id: "4",
     title: "Code Review Completed",
@@ -40,7 +40,7 @@ export const tasks: Task[] = [
     assignee: "Admin",
     assigneeInitial: "A",
     dueDate: "29 Jul",
-    labels: ["Deployment", "Deployment"],
+    labels: ["Review"],
   },
   {
     id: "5",
@@ -50,9 +50,8 @@ export const tasks: Task[] = [
     assignee: "Admin",
     assigneeInitial: "A",
     dueDate: "29 Jul",
-    labels: ["Deployment", "Deployment"],
+    labels: ["Design"],
   },
-
   {
     id: "6",
     title: "Feature Testing Passed",
@@ -83,7 +82,6 @@ export const tasks: Task[] = [
     dueDate: "01 Aug",
     labels: ["Audit", "Scheduled"],
   },
-
   {
     id: "9",
     title: "UI Review",
@@ -103,5 +101,63 @@ export const tasks: Task[] = [
     assigneeInitial: "D",
     dueDate: "03 Aug",
     labels: ["Development"],
+  },
+];
+
+export const projects: Project[] = [
+  {
+    id: "project-1",
+    name: "Website Redesign",
+    description:
+      "Redesign and improve the company website experience.",
+    status: "active",
+    members: ["Admin", "Designer", "Dev Team"],
+    taskCount: 12,
+    completedTasks: 7,
+    dueDate: "15 Sep",
+  },
+  {
+    id: "project-2",
+    name: "Mobile Application",
+    description:
+      "Development of the new mobile application.",
+    status: "active",
+    members: ["Admin", "Dev Team", "QA Team"],
+    taskCount: 18,
+    completedTasks: 9,
+    dueDate: "30 Sep",
+  },
+  {
+    id: "project-3",
+    name: "Marketing Campaign",
+    description:
+      "Plan and execute the upcoming marketing campaign.",
+    status: "active",
+    members: ["Admin", "Designer"],
+    taskCount: 10,
+    completedTasks: 6,
+    dueDate: "20 Sep",
+  },
+  {
+    id: "project-4",
+    name: "Security Audit",
+    description:
+      "Review application security and resolve identified issues.",
+    status: "completed",
+    members: ["Security", "Admin"],
+    taskCount: 8,
+    completedTasks: 8,
+    dueDate: "01 Aug",
+  },
+  {
+    id: "project-5",
+    name: "Legacy Migration",
+    description:
+      "Migrate legacy services to the new architecture.",
+    status: "on-hold",
+    members: ["Dev Team"],
+    taskCount: 14,
+    completedTasks: 4,
+    dueDate: "10 Oct",
   },
 ];
