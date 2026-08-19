@@ -1,4 +1,10 @@
-import { CalendarDays, MoreHorizontal } from "lucide-react";
+"use client";
+
+import {
+  CalendarDays,
+  MoreHorizontal,
+} from "lucide-react";
+import Link from "next/link";
 import { Task } from "@/types/task";
 
 interface TaskRowProps {
@@ -11,20 +17,20 @@ interface TaskRowProps {
   showReporter: boolean;
 }
 
-const priorityStyles = {
-  urgent: "text-red-500",
-  high: "text-red-500",
-  medium: "text-orange-500",
-  low: "text-gray-400",
-  none: "text-gray-400",
-};
-
 const priorityLabels = {
   urgent: "Urgent",
   high: "High",
   medium: "Medium",
   low: "Low",
   none: "No Priority",
+};
+
+const priorityStyles = {
+  urgent: "bg-red-50 text-red-600",
+  high: "bg-orange-50 text-orange-600",
+  medium: "bg-yellow-50 text-yellow-700",
+  low: "bg-gray-100 text-gray-500",
+  none: "bg-gray-100 text-gray-400",
 };
 
 export default function TaskRow({
@@ -40,12 +46,15 @@ export default function TaskRow({
     <div className="grid min-w-[760px] grid-cols-[minmax(260px,1.8fr)_140px_150px_150px_60px] items-center border-t border-gray-200 px-3 py-3 text-sm">
       {/* Task */}
       <div className="min-w-0">
-        <p className="truncate font-medium text-gray-900">
+        <Link
+          href={`/tasks/${task.id}`}
+          className="block truncate font-medium text-gray-900 hover:text-gray-600"
+        >
           {task.title}
-        </p>
+        </Link>
 
         {showLabels && task.labels.length > 0 && (
-          <div className="mt-1 flex flex-wrap gap-1.5">
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
             {task.labels.map((label, index) => (
               <span
                 key={`${task.id}-${label}-${index}`}
@@ -60,11 +69,12 @@ export default function TaskRow({
 
       {/* Priority */}
       {showPriority ? (
-        <div
-          className={`flex items-center gap-1.5 ${priorityStyles[task.priority]}`}
-        >
-          <span className="text-xs">▂▅</span>
-          <span>{priorityLabels[task.priority]}</span>
+        <div>
+          <span
+            className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${priorityStyles[task.priority]}`}
+          >
+            {priorityLabels[task.priority]}
+          </span>
         </div>
       ) : (
         <div />
@@ -72,20 +82,28 @@ export default function TaskRow({
 
       {/* Members */}
       {showMembers ? (
-        <div className="flex items-center">
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 text-[11px] font-medium text-gray-700">
-            {task.assigneeInitial ?? task.assignee.charAt(0)}
+        <div className="flex items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-900 text-[11px] font-medium text-white">
+            {task.assigneeInitial ??
+              task.assignee.charAt(0).toUpperCase()}
           </div>
+
+          <span className="truncate text-xs text-gray-600">
+            {task.assignee}
+          </span>
         </div>
       ) : (
         <div />
       )}
 
-      {/* Due Date */}
+      {/* Due date */}
       {showDueDate ? (
         <div className="flex items-center gap-2 text-gray-600">
           <CalendarDays size={14} />
-          <span>{task.dueDate}</span>
+
+          <span className="text-xs">
+            {task.dueDate}
+          </span>
         </div>
       ) : (
         <div />
@@ -95,16 +113,25 @@ export default function TaskRow({
       <div className="flex justify-end">
         <button
           type="button"
-          className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+          className="rounded-md p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
           aria-label={`Actions for ${task.title}`}
         >
           <MoreHorizontal size={17} />
         </button>
       </div>
 
-      {/* Prevent unused prop warnings while we prepare filters */}
-      {showStatus && <span className="hidden">{task.status}</span>}
-      {showReporter && <span className="hidden">{task.assignee}</span>}
+      {/* These will be used when those fields are implemented */}
+      {showStatus && (
+        <span className="hidden">
+          {task.status}
+        </span>
+      )}
+
+      {showReporter && (
+        <span className="hidden">
+          {task.assignee}
+        </span>
+      )}
     </div>
   );
 }

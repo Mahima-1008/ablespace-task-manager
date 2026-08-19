@@ -40,6 +40,8 @@ interface TaskHeaderProps {
 
   filters: TaskFilters;
   onFiltersChange: (filters: TaskFilters) => void;
+
+  onAddTask: () => void;
 }
 
 export default function TaskHeader({
@@ -51,6 +53,7 @@ export default function TaskHeader({
   onFieldsChange,
   filters,
   onFiltersChange,
+  onAddTask,
 }: TaskHeaderProps) {
   const [showFields, setShowFields] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -109,7 +112,7 @@ export default function TaskHeader({
 
       {/* Actions */}
       <div className="flex items-center gap-2">
-        {/* Board / List */}
+        {/* List / Board */}
         <div className="flex h-10 overflow-hidden rounded-lg border border-gray-200 bg-white">
           <button
             type="button"
@@ -161,7 +164,7 @@ export default function TaskHeader({
           )}
         </div>
 
-        {/* Filters */}
+        {/* Filter */}
         <div className="relative">
           <button
             type="button"
@@ -201,6 +204,7 @@ export default function TaskHeader({
         {/* Add Task */}
         <button
           type="button"
+          onClick={onAddTask}
           className="flex h-10 items-center gap-2 rounded-lg bg-gray-900 px-4 text-sm font-medium text-white transition hover:bg-gray-800"
         >
           <Plus size={17} />
@@ -261,16 +265,11 @@ function FieldsDropdown({
 
   return (
     <div className="absolute right-0 top-12 z-50 w-64 rounded-xl border border-gray-200 bg-white p-2 shadow-xl">
+      {/* View switch */}
       <div className="mb-2 grid grid-cols-2 overflow-hidden rounded-lg border border-gray-200">
         <button
           type="button"
-          className={`flex items-center justify-center gap-2 px-3 py-2 text-sm ${
-            visibleFields.priority ||
-            visibleFields.members ||
-            visibleFields.dueDate
-              ? "bg-gray-100 font-medium text-gray-900"
-              : "text-gray-600"
-          }`}
+          className="flex items-center justify-center gap-2 bg-gray-100 px-3 py-2 text-sm font-medium text-gray-900"
         >
           <Table2 size={15} />
           List
@@ -278,7 +277,6 @@ function FieldsDropdown({
 
         <button
           type="button"
-          onClick={() => {}}
           className="flex items-center justify-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
         >
           <LayoutGrid size={15} />
@@ -286,6 +284,7 @@ function FieldsDropdown({
         </button>
       </div>
 
+      {/* Fields */}
       <div className="space-y-1">
         {fields.map((field) => (
           <label
@@ -439,11 +438,7 @@ function FilterDropdown({
       {/* Members */}
       <FilterSection
         title="Members"
-        value={
-          filters.member === "all"
-            ? "Any"
-            : filters.member
-        }
+        value={filters.member === "all" ? "Any" : filters.member}
         isOpen={openSection === "member"}
         onClick={() =>
           setOpenSection(
@@ -467,7 +462,7 @@ function FilterDropdown({
         />
       )}
 
-      {/* Remaining filters */}
+      {/* Other filters */}
       <div className="mt-1 border-t border-gray-100 pt-1">
         {["Due Date", "Teams", "Labels", "Reporter"].map(
           (item) => (
