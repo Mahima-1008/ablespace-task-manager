@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  Check,
+  ChevronRight,
   Filter,
   LayoutGrid,
   Plus,
@@ -20,13 +22,24 @@ interface VisibleFields {
   reporter: boolean;
 }
 
+export interface TaskFilters {
+  status: string;
+  priority: string;
+  member: string;
+}
+
 interface TaskHeaderProps {
   view: "board" | "list";
   onViewChange: (view: "board" | "list") => void;
+
   search: string;
   onSearchChange: (value: string) => void;
+
   visibleFields: VisibleFields;
   onFieldsChange: (fields: VisibleFields) => void;
+
+  filters: TaskFilters;
+  onFiltersChange: (filters: TaskFilters) => void;
 }
 
 export default function TaskHeader({
@@ -36,9 +49,16 @@ export default function TaskHeader({
   onSearchChange,
   visibleFields,
   onFieldsChange,
+  filters,
+  onFiltersChange,
 }: TaskHeaderProps) {
   const [showFields, setShowFields] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+
+  const hasActiveFilters =
+    filters.status !== "all" ||
+    filters.priority !== "all" ||
+    filters.member !== "all";
 
   const handleFieldsClick = () => {
     setShowFields((current) => !current);
@@ -48,6 +68,14 @@ export default function TaskHeader({
   const handleFilterClick = () => {
     setShowFilters((current) => !current);
     setShowFields(false);
+  };
+
+  const clearFilters = () => {
+    onFiltersChange({
+      status: "all",
+      priority: "all",
+      member: "all",
+    });
   };
 
   return (
@@ -79,9 +107,9 @@ export default function TaskHeader({
         )}
       </div>
 
-      {/* Right-side actions */}
+      {/* Actions */}
       <div className="flex items-center gap-2">
-        {/* Board / List toggle */}
+        {/* Board / List */}
         <div className="flex h-10 overflow-hidden rounded-lg border border-gray-200 bg-white">
           <button
             type="button"
@@ -133,22 +161,41 @@ export default function TaskHeader({
           )}
         </div>
 
-        {/* Filter */}
+        {/* Filters */}
         <div className="relative">
           <button
             type="button"
             onClick={handleFilterClick}
-            className={`flex h-10 items-center justify-center rounded-lg border px-3 transition ${
-              showFilters
+            className={`relative flex h-10 items-center justify-center gap-2 rounded-lg border px-3 transition ${
+              showFilters || hasActiveFilters
                 ? "border-gray-300 bg-gray-100 text-gray-900"
                 : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
             }`}
             aria-label="Filter tasks"
           >
             <Filter size={16} />
+            <span className="hidden sm:inline">Filter</span>
+
+            {hasActiveFilters && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-gray-900 px-1 text-[10px] font-semibold text-white">
+                {
+                  [
+                    filters.status !== "all",
+                    filters.priority !== "all",
+                    filters.member !== "all",
+                  ].filter(Boolean).length
+                }
+              </span>
+            )}
           </button>
 
-          {showFilters && <FilterDropdown />}
+          {showFilters && (
+            <FilterDropdown
+              filters={filters}
+              onFiltersChange={onFiltersChange}
+              onClear={clearFilters}
+            />
+          )}
         </div>
 
         {/* Add Task */}
@@ -214,14 +261,15 @@ function FieldsDropdown({
 
   return (
     <div className="absolute right-0 top-12 z-50 w-64 rounded-xl border border-gray-200 bg-white p-2 shadow-xl">
-      {/* View switch inside Fields menu */}
       <div className="mb-2 grid grid-cols-2 overflow-hidden rounded-lg border border-gray-200">
         <button
           type="button"
-          className={`flex items-center justify-center gap-2 px-3 py-2 text-sm transition ${
-            true
+          className={`flex items-center justify-center gap-2 px-3 py-2 text-sm ${
+            visibleFields.priority ||
+            visibleFields.members ||
+            visibleFields.dueDate
               ? "bg-gray-100 font-medium text-gray-900"
-              : "text-gray-600 hover:bg-gray-50"
+              : "text-gray-600"
           }`}
         >
           <Table2 size={15} />
@@ -230,6 +278,7 @@ function FieldsDropdown({
 
         <button
           type="button"
+          onClick={() => {}}
           className="flex items-center justify-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
         >
           <LayoutGrid size={15} />
@@ -237,7 +286,6 @@ function FieldsDropdown({
         </button>
       </div>
 
-      {/* Field options */}
       <div className="space-y-1">
         {fields.map((field) => (
           <label
@@ -263,30 +311,258 @@ function FieldsDropdown({
    FILTER DROPDOWN
 ========================================================= */
 
-function FilterDropdown() {
-  const filters = [
-    "Status",
-    "Priority",
-    "Members",
-    "Due Date",
-    "Teams",
-    "Labels",
-    "Reporter",
+function FilterDropdown({
+  filters,
+  onFiltersChange,
+  onClear,
+}: {
+  filters: TaskFilters;
+  onFiltersChange: (filters: TaskFilters) => void;
+  onClear: () => void;
+}) {
+  const [openSection, setOpenSection] = useState<string | null>(null);
+
+  const statuses = [
+    { value: "all", label: "All Statuses" },
+    { value: "todo", label: "To Do" },
+    { value: "doing", label: "Doing" },
+    { value: "completed", label: "Completed" },
+    { value: "on-hold", label: "On Hold" },
+  ];
+
+  const priorities = [
+    { value: "all", label: "All Priorities" },
+    { value: "urgent", label: "Urgent" },
+    { value: "high", label: "High" },
+    { value: "medium", label: "Medium" },
+    { value: "low", label: "Low" },
+    { value: "none", label: "No Priority" },
+  ];
+
+  const members = [
+    { value: "all", label: "All Members" },
+    { value: "Admin", label: "Admin" },
+    { value: "QA Team", label: "QA Team" },
+    { value: "Designer", label: "Designer" },
+    { value: "Security", label: "Security" },
+    { value: "Dev Team", label: "Dev Team" },
   ];
 
   return (
-    <div className="absolute right-0 top-12 z-50 w-64 rounded-xl border border-gray-200 bg-white p-2 shadow-xl">
-      {filters.map((filter) => (
-        <button
-          key={filter}
-          type="button"
-          className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50"
-        >
-          <span>{filter}</span>
+    <div className="absolute right-0 top-12 z-50 w-72 rounded-xl border border-gray-200 bg-white p-2 shadow-xl">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-gray-100 px-2 py-2">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900">
+            Filters
+          </h3>
 
-          <span className="text-gray-400">›</span>
+          <p className="mt-0.5 text-[11px] text-gray-400">
+            Narrow down your tasks
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={onClear}
+          className="text-xs font-medium text-gray-500 hover:text-gray-900"
+        >
+          Clear
         </button>
-      ))}
+      </div>
+
+      {/* Status */}
+      <FilterSection
+        title="Status"
+        value={
+          filters.status === "all"
+            ? "Any"
+            : statuses.find((item) => item.value === filters.status)
+                ?.label ?? "Any"
+        }
+        isOpen={openSection === "status"}
+        onClick={() =>
+          setOpenSection(
+            openSection === "status" ? null : "status"
+          )
+        }
+      />
+
+      {openSection === "status" && (
+        <OptionList
+          options={statuses}
+          selected={filters.status}
+          onSelect={(value) => {
+            onFiltersChange({
+              ...filters,
+              status: value,
+            });
+
+            setOpenSection(null);
+          }}
+        />
+      )}
+
+      {/* Priority */}
+      <FilterSection
+        title="Priority"
+        value={
+          filters.priority === "all"
+            ? "Any"
+            : priorities.find(
+                (item) => item.value === filters.priority
+              )?.label ?? "Any"
+        }
+        isOpen={openSection === "priority"}
+        onClick={() =>
+          setOpenSection(
+            openSection === "priority" ? null : "priority"
+          )
+        }
+      />
+
+      {openSection === "priority" && (
+        <OptionList
+          options={priorities}
+          selected={filters.priority}
+          onSelect={(value) => {
+            onFiltersChange({
+              ...filters,
+              priority: value,
+            });
+
+            setOpenSection(null);
+          }}
+        />
+      )}
+
+      {/* Members */}
+      <FilterSection
+        title="Members"
+        value={
+          filters.member === "all"
+            ? "Any"
+            : filters.member
+        }
+        isOpen={openSection === "member"}
+        onClick={() =>
+          setOpenSection(
+            openSection === "member" ? null : "member"
+          )
+        }
+      />
+
+      {openSection === "member" && (
+        <OptionList
+          options={members}
+          selected={filters.member}
+          onSelect={(value) => {
+            onFiltersChange({
+              ...filters,
+              member: value,
+            });
+
+            setOpenSection(null);
+          }}
+        />
+      )}
+
+      {/* Remaining filters */}
+      <div className="mt-1 border-t border-gray-100 pt-1">
+        {["Due Date", "Teams", "Labels", "Reporter"].map(
+          (item) => (
+            <button
+              key={item}
+              type="button"
+              className="flex w-full items-center justify-between rounded-lg px-2 py-2.5 text-sm text-gray-500 hover:bg-gray-50"
+            >
+              <span>{item}</span>
+              <ChevronRight size={15} />
+            </button>
+          )
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   FILTER SECTION
+========================================================= */
+
+function FilterSection({
+  title,
+  value,
+  isOpen,
+  onClick,
+}: {
+  title: string;
+  value: string;
+  isOpen: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center justify-between rounded-lg px-2 py-2.5 text-sm transition hover:bg-gray-50"
+    >
+      <div className="flex flex-col items-start">
+        <span className="font-medium text-gray-800">
+          {title}
+        </span>
+
+        <span className="text-[11px] text-gray-400">
+          {value}
+        </span>
+      </div>
+
+      <ChevronRight
+        size={15}
+        className={`text-gray-400 transition-transform ${
+          isOpen ? "rotate-90" : ""
+        }`}
+      />
+    </button>
+  );
+}
+
+/* =========================================================
+   OPTION LIST
+========================================================= */
+
+function OptionList({
+  options,
+  selected,
+  onSelect,
+}: {
+  options: {
+    value: string;
+    label: string;
+  }[];
+  selected: string;
+  onSelect: (value: string) => void;
+}) {
+  return (
+    <div className="mb-1 rounded-lg bg-gray-50 p-1">
+      {options.map((option) => {
+        const isSelected = selected === option.value;
+
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onSelect(option.value)}
+            className="flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left text-xs text-gray-700 hover:bg-white"
+          >
+            <span>{option.label}</span>
+
+            {isSelected && (
+              <Check size={14} className="text-gray-900" />
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }
