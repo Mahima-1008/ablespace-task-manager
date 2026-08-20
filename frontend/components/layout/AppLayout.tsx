@@ -1,6 +1,7 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Sidebar from "./Sidebar";
 
 interface AppLayoutProps {
@@ -12,15 +13,42 @@ interface AppLayoutProps {
 export default function AppLayout({
   children,
 }: AppLayoutProps) {
+  const router = useRouter();
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    const authenticated =
+      localStorage.getItem("ablespace_auth") === "true";
+
+    if (!authenticated) {
+      router.replace("/login");
+      return;
+    }
+
+    setCheckingAuth(false);
+  }, [router]);
+
+  if (checkingAuth) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <p className="text-sm text-gray-500">
+          Loading AbleSpace...
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Fixed Sidebar */}
+      {/* Fixed sidebar */}
       <Sidebar />
 
-      {/* Main Application Area */}
-      <div className="ml-64 min-h-screen">
-        <main className="min-h-screen overflow-x-auto p-6">
-          {children}
+      {/* Content area */}
+      <div className="ml-64">
+        <main className="px-6 py-6">
+          <div className="w-full max-w-7xl">
+            {children}
+          </div>
         </main>
       </div>
     </div>

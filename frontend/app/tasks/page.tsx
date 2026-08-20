@@ -13,38 +13,56 @@ import TaskList from "@/components/tasks/TaskList";
 import {
   createTask,
   getTasks,
+  Task as ApiTask,
 } from "@/lib/api";
 
 import { Task } from "@/types/task";
 
+function normalizeTask(task: ApiTask): Task {
+  const id = task._id || task.id || crypto.randomUUID();
+
+  return {
+    id,
+    _id: task._id,
+    title: task.title,
+    description: task.description || "",
+    status: task.status,
+    priority: task.priority,
+    assignee: task.assignee || "Admin",
+    assigneeInitial:
+      task.assigneeInitial ||
+      (task.assignee || "A").charAt(0).toUpperCase(),
+    dueDate: task.dueDate || "",
+    labels: task.labels || [],
+    projectId: task.projectId || null,
+    createdAt: task.createdAt,
+    updatedAt: task.updatedAt,
+  };
+}
+
 export default function TasksPage() {
-  const [allTasks, setAllTasks] =
-    useState<Task[]>([]);
+  const [allTasks, setAllTasks] = useState<Task[]>([]);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [loading, setLoading] = useState(true);
 
-  const [error, setError] =
-    useState("");
+  const [error, setError] = useState("");
 
   const [view, setView] =
     useState<"board" | "list">("board");
 
-  const [search, setSearch] =
-    useState("");
+  const [search, setSearch] = useState("");
 
   const [showAddTask, setShowAddTask] =
     useState(false);
 
-  const [visibleFields, setVisibleFields] =
-    useState({
-      priority: true,
-      members: true,
-      dueDate: true,
-      labels: false,
-      status: false,
-      reporter: false,
-    });
+  const [visibleFields, setVisibleFields] = useState({
+    priority: true,
+    members: true,
+    dueDate: true,
+    labels: false,
+    status: false,
+    reporter: false,
+  });
 
   const [filters, setFilters] =
     useState<TaskFilters>({
@@ -53,11 +71,12 @@ export default function TasksPage() {
       member: "all",
     });
 
-  /* =========================
-     LOAD TASKS
-  ========================= */
-
+  /*
+   * Load tasks from backend
+   */
   useEffect(() => {
+    let mounted = true;
+
     async function loadTasks() {
       try {
         setLoading(true);
@@ -65,51 +84,49 @@ export default function TasksPage() {
 
         const data = await getTasks();
 
-        setAllTasks(data);
+        if (!mounted) return;
+
+        setAllTasks(data.map(normalizeTask));
       } catch (err) {
-        console.error(
-          "Failed to load tasks:",
-          err,
-        );
+        console.error("Failed to load tasks:", err);
+
+        if (!mounted) return;
 
         setError(
-          "Unable to load tasks. Make sure the backend is running on port 5001.",
+          "Unable to load tasks. Please make sure the backend is running.",
         );
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     }
 
     loadTasks();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  /* =========================
-     FILTER TASKS
-  ========================= */
-
+  /*
+   * Search + filters
+   */
   const filteredTasks = useMemo(() => {
-    const query =
-      search.trim().toLowerCase();
+    const query = search.trim().toLowerCase();
 
     return allTasks.filter((task) => {
-      const labels =
-        task.labels || [];
-
-      const assignee =
-        task.assignee || "";
-
       const matchesSearch =
         !query ||
-        task.title
-          .toLowerCase()
+        task.title.toLowerCase().includes(query) ||
+        task.description
+          ?.toLowerCase()
           .includes(query) ||
-        assignee
-          .toLowerCase()
+        task.assignee
+          ?.toLowerCase()
           .includes(query) ||
-        labels.some((label) =>
-          label
-            .toLowerCase()
-            .includes(query),
+        task.labels?.some((label) =>
+          label.toLowerCase().includes(query),
         );
 
       const matchesStatus =
@@ -118,12 +135,11 @@ export default function TasksPage() {
 
       const matchesPriority =
         filters.priority === "all" ||
-        task.priority ===
-          filters.priority;
+        task.priority === filters.priority;
 
       const matchesMember =
         filters.member === "all" ||
-        assignee === filters.member;
+        task.assignee === filters.member;
 
       return (
         matchesSearch &&
@@ -138,23 +154,38 @@ export default function TasksPage() {
     filters,
   ]);
 
-  /* =========================
-     CREATE TASK
-  ========================= */
-
+  /*
+   * Create task
+   */
   const handleCreateTask = async (
     newTask: Task,
   ) => {
     try {
-      const createdTask =
-        await createTask(newTask);
+      setError("");
 
-      setAllTasks(
-        (currentTasks) => [
-          createdTask,
-          ...currentTasks,
-        ],
-      );
+      const created = await createTask({
+        title: newTask.title,
+        description: newTask.description || "",
+        status: newTask.status,
+        priority: newTask.priority,
+        assignee: newTask.assignee || "Admin",
+        assigneeInitial:
+          newTask.assigneeInitial ||
+          (newTask.assignee || "A")
+            .charAt(0)
+            .toUpperCase(),
+        dueDate: newTask.dueDate || "",
+        labels: newTask.labels || [],
+        projectId: newTask.projectId || null,
+      });
+
+      const normalized =
+        normalizeTask(created);
+
+      setAllTasks((current) => [
+        normalized,
+        ...current,
+      ]);
 
       setShowAddTask(false);
     } catch (err) {
@@ -164,14 +195,14 @@ export default function TasksPage() {
       );
 
       setError(
-        "Unable to create task. Please try again.",
+        "Failed to create task. Please try again.",
       );
     }
   };
 
   return (
     <AppLayout title="Tasks">
-      <div className="mx-auto w-full max-w-[1600px] space-y-5">
+      <div className="space-y-5">
         {/* Heading */}
         <div>
           <h1 className="text-xl font-semibold text-gray-900">
@@ -182,13 +213,6 @@ export default function TasksPage() {
             Manage and track your workspace tasks.
           </p>
         </div>
-
-        {/* Error */}
-        {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
 
         {/* Toolbar */}
         <TaskHeader
@@ -205,12 +229,19 @@ export default function TasksPage() {
           }
         />
 
+        {/* Error */}
+        {error && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            {error}
+          </div>
+        )}
+
         {/* Loading */}
         {loading ? (
           <div className="rounded-xl border border-gray-200 bg-white p-12 text-center">
             <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-gray-200 border-t-gray-900" />
 
-            <p className="mt-3 text-sm text-gray-500">
+            <p className="mt-4 text-sm text-gray-500">
               Loading tasks...
             </p>
           </div>
@@ -233,9 +264,8 @@ export default function TasksPage() {
               />
             )}
 
-            {/* Empty State */}
-            {filteredTasks.length ===
-              0 && (
+            {/* Empty state */}
+            {filteredTasks.length === 0 && (
               <div className="rounded-xl border border-gray-200 bg-white p-12 text-center">
                 <h3 className="text-base font-semibold text-gray-900">
                   No tasks found
@@ -243,25 +273,12 @@ export default function TasksPage() {
 
                 <p className="mt-2 text-sm text-gray-500">
                   {search ||
-                  filters.status !==
-                    "all" ||
-                  filters.priority !==
-                    "all" ||
-                  filters.member !==
-                    "all"
+                  filters.status !== "all" ||
+                  filters.priority !== "all" ||
+                  filters.member !== "all"
                     ? "Try changing your search or filters."
-                    : "Create your first task to get started."}
+                    : "There are no tasks in your workspace yet."}
                 </p>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowAddTask(true)
-                  }
-                  className="mt-5 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-800"
-                >
-                  Add Task
-                </button>
               </div>
             )}
           </>
@@ -274,9 +291,7 @@ export default function TasksPage() {
         onClose={() =>
           setShowAddTask(false)
         }
-        onCreateTask={
-          handleCreateTask
-        }
+        onCreateTask={handleCreateTask}
       />
     </AppLayout>
   );

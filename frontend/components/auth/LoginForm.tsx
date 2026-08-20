@@ -1,113 +1,71 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import { CheckSquare, Lock, Mail } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Lock, Mail } from "lucide-react";
 
 export default function LoginForm() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(
-    event: FormEvent<HTMLFormElement>,
-  ) {
+  useEffect(() => {
+    const authenticated =
+      localStorage.getItem("ablespace_auth") === "true";
+
+    if (authenticated) {
+      router.replace("/");
+    }
+  }, [router]);
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     setError("");
 
     if (!email.trim() || !password.trim()) {
-      setError(
-        "Please enter your email and password.",
-      );
+      setError("Please enter your email and password.");
       return;
     }
 
-    try {
-      setLoading(true);
+    setLoading(true);
 
-      /*
-       * Temporary client-side authentication.
-       *
-       * This gives the application a working login
-       * flow without adding unnecessary backend
-       * authentication complexity before the deadline.
-       */
-      localStorage.setItem(
-        "ablespace_user",
-        JSON.stringify({
-          email: email.trim(),
-          name:
-            email
-              .split("@")[0]
-              .replace(/[._-]/g, " ")
-              .replace(/\b\w/g, (letter) =>
-                letter.toUpperCase(),
-              ),
-        }),
-      );
+    localStorage.setItem("ablespace_auth", "true");
 
-      localStorage.setItem(
-        "ablespace_authenticated",
-        "true",
-      );
-
-      router.push("/tasks");
-    } catch (err) {
-      console.error(err);
-
-      setError(
-        "Unable to sign in. Please try again.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function handleGuestLogin() {
     localStorage.setItem(
       "ablespace_user",
       JSON.stringify({
-        email: "guest@ablespace.com",
-        name: "Guest User",
+        name: "Mahima",
+        email: email.trim(),
       }),
     );
 
-    localStorage.setItem(
-      "ablespace_authenticated",
-      "true",
-    );
-
-    router.push("/tasks");
-  }
+    router.replace("/");
+  };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+    <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-md">
-        <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
-          {/* Logo / heading */}
-          <div className="mb-8 text-center">
-            <h1 className="text-2xl font-semibold text-gray-900">
-              AbleSpace
-            </h1>
-
-            <p className="mt-2 text-sm text-gray-500">
-              Sign in to manage your workspace
-            </p>
+        {/* Logo */}
+        <div className="mb-8 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-gray-900 text-white">
+            <CheckSquare size={24} />
           </div>
 
-          {/* Error */}
-          {error && (
-            <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
+          <h1 className="mt-4 text-2xl font-semibold text-gray-900">
+            Welcome to AbleSpace
+          </h1>
 
-          {/* Login form */}
+          <p className="mt-2 text-sm text-gray-500">
+            Sign in to manage your workspace.
+          </p>
+        </div>
+
+        {/* Login card */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-7 shadow-sm">
           <form
             onSubmit={handleSubmit}
             className="space-y-5"
@@ -118,7 +76,7 @@ export default function LoginForm() {
                 htmlFor="email"
                 className="mb-2 block text-sm font-medium text-gray-700"
               >
-                Email
+                Email address
               </label>
 
               <div className="relative">
@@ -132,12 +90,10 @@ export default function LoginForm() {
                   type="email"
                   value={email}
                   onChange={(event) =>
-                    setEmail(
-                      event.target.value,
-                    )
+                    setEmail(event.target.value)
                   }
                   placeholder="you@example.com"
-                  className="h-11 w-full rounded-lg border border-gray-200 bg-white pl-10 pr-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-400 focus:ring-1 focus:ring-gray-100"
+                  className="h-11 w-full rounded-lg border border-gray-200 bg-white pl-10 pr-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
                 />
               </div>
             </div>
@@ -162,49 +118,36 @@ export default function LoginForm() {
                   type="password"
                   value={password}
                   onChange={(event) =>
-                    setPassword(
-                      event.target.value,
-                    )
+                    setPassword(event.target.value)
                   }
                   placeholder="Enter your password"
-                  className="h-11 w-full rounded-lg border border-gray-200 bg-white pl-10 pr-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-400 focus:ring-1 focus:ring-gray-100"
+                  className="h-11 w-full rounded-lg border border-gray-200 bg-white pl-10 pr-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
                 />
               </div>
             </div>
 
-            {/* Submit */}
+            {/* Error */}
+            {error && (
+              <div className="rounded-lg bg-red-50 px-3 py-2.5 text-sm text-red-600">
+                {error}
+              </div>
+            )}
+
+            {/* Login */}
             <button
               type="submit"
               disabled={loading}
               className="flex h-11 w-full items-center justify-center rounded-lg bg-gray-900 text-sm font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading
-                ? "Signing in..."
-                : "Sign In"}
+              {loading ? "Signing in..." : "Sign In"}
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="my-6 flex items-center gap-3">
-            <div className="h-px flex-1 bg-gray-200" />
-
-            <span className="text-xs text-gray-400">
-              OR
-            </span>
-
-            <div className="h-px flex-1 bg-gray-200" />
-          </div>
-
-          {/* Guest */}
-          <button
-            type="button"
-            onClick={handleGuestLogin}
-            className="flex h-11 w-full items-center justify-center rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 transition hover:bg-gray-50"
-          >
-            Continue as Guest
-          </button>
+          <p className="mt-5 text-center text-xs text-gray-400">
+            Demo login — enter any email and password.
+          </p>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
