@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   CheckSquare,
   FolderKanban,
   Settings,
   User,
   ChevronDown,
+  LogOut,
 } from "lucide-react";
 
 const navigationItems = [
@@ -25,6 +26,19 @@ const navigationItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  function handleLogout() {
+    localStorage.removeItem(
+      "ablespace_authenticated",
+    );
+
+    localStorage.removeItem(
+      "ablespace_user",
+    );
+
+    router.replace("/login");
+  }
 
   return (
     <aside className="flex h-screen w-64 flex-col border-r border-gray-200 bg-white">
@@ -63,7 +77,9 @@ export default function Sidebar() {
 
             const isActive =
               pathname === item.href ||
-              pathname.startsWith(`${item.href}/`);
+              pathname.startsWith(
+                `${item.href}/`,
+              );
 
             return (
               <Link
@@ -75,7 +91,10 @@ export default function Sidebar() {
                     : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
                 }`}
               >
-                <Icon size={17} strokeWidth={1.8} />
+                <Icon
+                  size={17}
+                  strokeWidth={1.8}
+                />
 
                 <span>{item.label}</span>
               </Link>
@@ -88,19 +107,49 @@ export default function Sidebar() {
       <div className="border-t border-gray-100 p-3">
         <Link
           href="/profile"
-          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-gray-500 transition hover:bg-gray-50 hover:text-gray-900"
+          className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
+            pathname === "/profile"
+              ? "bg-gray-100 font-medium text-gray-900"
+              : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+          }`}
         >
-          <User size={17} strokeWidth={1.8} />
+          <User
+            size={17}
+            strokeWidth={1.8}
+          />
+
           Profile
         </Link>
 
         <Link
           href="/settings"
-          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-gray-500 transition hover:bg-gray-50 hover:text-gray-900"
+          className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
+            pathname === "/settings"
+              ? "bg-gray-100 font-medium text-gray-900"
+              : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+          }`}
         >
-          <Settings size={17} strokeWidth={1.8} />
+          <Settings
+            size={17}
+            strokeWidth={1.8}
+          />
+
           Settings
         </Link>
+
+        {/* Logout */}
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-gray-500 transition hover:bg-red-50 hover:text-red-600"
+        >
+          <LogOut
+            size={17}
+            strokeWidth={1.8}
+          />
+
+          Logout
+        </button>
       </div>
     </aside>
   );

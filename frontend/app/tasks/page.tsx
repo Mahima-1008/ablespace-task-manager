@@ -1,143 +1,282 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import {
+  ArrowLeft,
+  Calendar,
+  Check,
+  Clock,
+  Trash2,
+} from "lucide-react";
 
 import AppLayout from "@/components/layout/AppLayout";
-import AddTaskModal from "@/components/tasks/AddTaskModal";
-import TaskBoard from "@/components/tasks/TaskBoard";
-import TaskHeader, {
-  TaskFilters,
-} from "@/components/tasks/TaskHeader";
-import TaskList from "@/components/tasks/TaskList";
-import { tasks as initialTasks } from "@/lib/constants";
-import { Task } from "@/types/task";
+import {
+  deleteTask,
+  getTask,
+  updateTask,
+  Task,
+} from "@/lib/api";
 
-export default function TasksPage() {
-  const [allTasks, setAllTasks] = useState<Task[]>(initialTasks);
+export default function TaskDetailsPage() {
+  const params = useParams();
+  const router = useRouter();
 
-  const [view, setView] = useState<"board" | "list">("board");
+  const id = params.id as string;
 
-  const [search, setSearch] = useState("");
+  const [task, setTask] = useState<Task | null>(
+    null,
+  );
 
-  const [showAddTask, setShowAddTask] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const [visibleFields, setVisibleFields] = useState({
-    priority: true,
-    members: true,
-    dueDate: true,
-    labels: false,
-    status: false,
-    reporter: false,
-  });
+  useEffect(() => {
+    async function loadTask() {
+      try {
+        setLoading(true);
 
-  const [filters, setFilters] = useState<TaskFilters>({
-    status: "all",
-    priority: "all",
-    member: "all",
-  });
+        const data = await getTask(id);
 
-  const filteredTasks = useMemo(() => {
-    const query = search.trim().toLowerCase();
+        setTask(data);
+      } catch (err) {
+        console.error(err);
+        setError("Task could not be loaded.");
+      } finally {
+        setLoading(false);
+      }
+    }
 
-    return allTasks.filter((task) => {
-      const matchesSearch =
-        !query ||
-        task.title.toLowerCase().includes(query) ||
-        task.assignee.toLowerCase().includes(query) ||
-        task.labels.some((label) =>
-          label.toLowerCase().includes(query)
-        );
+    if (id) {
+      loadTask();
+    }
+  }, [id]);
 
-      const matchesStatus =
-        filters.status === "all" ||
-        task.status === filters.status;
+  async function handleStatusChange(
+    status: Task["status"],
+  ) {
+    if (!task) return;
 
-      const matchesPriority =
-        filters.priority === "all" ||
-        task.priority === filters.priority;
+    try {
+      const updated = await updateTask(id, {
+        status,
+      });
 
-      const matchesMember =
-        filters.member === "all" ||
-        task.assignee === filters.member;
+      setTask(updated);
+    } catch (err) {
+      console.error(err);
+      setError("Unable to update task.");
+    }
+  }
 
-      return (
-        matchesSearch &&
-        matchesStatus &&
-        matchesPriority &&
-        matchesMember
-      );
-    });
-  }, [allTasks, search, filters]);
+  async function handleDelete() {
+    if (!task) return;
 
-  const handleCreateTask = (newTask: Task) => {
-    setAllTasks((currentTasks) => [
-      newTask,
-      ...currentTasks,
-    ]);
-  };
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this task?",
+    );
 
-  return (
-    <>
-      <AppLayout title="Tasks">
-        <div className="space-y-5">
-          {/* Heading */}
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900">
-              Tasks
-            </h2>
+    if (!confirmed) return;
 
-            <p className="mt-1 text-sm text-gray-500">
-              Manage and track your workspace tasks.
-            </p>
-          </div>
+    try {
+      await deleteTask(id);
 
-          {/* Toolbar */}
-          <TaskHeader
-            view={view}
-            onViewChange={setView}
-            search={search}
-            onSearchChange={setSearch}
-            visibleFields={visibleFields}
-            onFieldsChange={setVisibleFields}
-            filters={filters}
-            onFiltersChange={setFilters}
-            onAddTask={() => setShowAddTask(true)}
-          />
+      router.push("/tasks");
+    } catch (err) {
+      console.error(err);
+      setError("Unable to delete task.");
+    }
+  }
 
-          {/* Board */}
-          {view === "board" && (
-            <TaskBoard tasks={filteredTasks} />
-          )}
-
-          {/* List */}
-          {view === "list" && (
-            <TaskList
-              tasks={filteredTasks}
-              visibleFields={visibleFields}
-            />
-          )}
-
-          {/* Empty state */}
-          {filteredTasks.length === 0 && (
-            <div className="rounded-xl border border-gray-200 bg-white p-12 text-center">
-              <h3 className="text-base font-semibold text-gray-900">
-                No tasks found
-              </h3>
-
-              <p className="mt-2 text-sm text-gray-500">
-                Try changing your search or filters.
-              </p>
-            </div>
-          )}
+  if (loading) {
+    return (
+      <AppLayout title="Task Details">
+        <div className="flex min-h-[400px] items-center justify-center">
+          <p className="text-sm text-gray-500">
+            Loading task...
+          </p>
         </div>
       </AppLayout>
+    );
+  }
 
-      {/* Add Task Modal */}
-      <AddTaskModal
-        isOpen={showAddTask}
-        onClose={() => setShowAddTask(false)}
-        onCreateTask={handleCreateTask}
-      />
-    </>
+  if (!task) {
+    return (
+      <AppLayout title="Task Details">
+        <div className="rounded-xl border border-gray-200 bg-white p-10 text-center">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Task not found
+          </h2>
+
+          <button
+            onClick={() => router.push("/tasks")}
+            className="mt-4 text-sm font-medium text-gray-900 underline"
+          >
+            Back to tasks
+          </button>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  return (
+    <AppLayout title="Task Details">
+      <div className="space-y-6">
+        <button
+          onClick={() => router.push("/tasks")}
+          className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900"
+        >
+          <ArrowLeft size={16} />
+          Back to Tasks
+        </button>
+
+        {error && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
+        <div className="rounded-xl border border-gray-200 bg-white">
+          <div className="border-b border-gray-200 p-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-semibold text-gray-900">
+                  {task.title}
+                </h1>
+
+                <p className="mt-2 text-sm text-gray-500">
+                  {task.description ||
+                    "No description provided."}
+                </p>
+              </div>
+
+              <button
+                onClick={handleDelete}
+                className="flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+              >
+                <Trash2 size={16} />
+                Delete
+              </button>
+            </div>
+          </div>
+
+          <div className="grid gap-6 p-6 md:grid-cols-2">
+            {/* Status */}
+            <div>
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">
+                Status
+              </p>
+
+              <select
+                value={task.status}
+                onChange={(e) =>
+                  handleStatusChange(
+                    e.target.value as Task["status"],
+                  )
+                }
+                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none"
+              >
+                <option value="todo">
+                  To Do
+                </option>
+
+                <option value="doing">
+                  Doing
+                </option>
+
+                <option value="completed">
+                  Completed
+                </option>
+
+                <option value="on-hold">
+                  On Hold
+                </option>
+              </select>
+            </div>
+
+            {/* Priority */}
+            <div>
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">
+                Priority
+              </p>
+
+              <div className="flex h-10 items-center rounded-lg border border-gray-200 px-3 text-sm">
+                {task.priority}
+              </div>
+            </div>
+
+            {/* Assignee */}
+            <div>
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">
+                Assignee
+              </p>
+
+              <div className="flex h-10 items-center gap-2 rounded-lg border border-gray-200 px-3 text-sm">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-900 text-xs text-white">
+                  {task.assigneeInitial ||
+                    "A"}
+                </span>
+
+                {task.assignee || "Admin"}
+              </div>
+            </div>
+
+            {/* Due date */}
+            <div>
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">
+                Due Date
+              </p>
+
+              <div className="flex h-10 items-center gap-2 rounded-lg border border-gray-200 px-3 text-sm">
+                <Calendar size={16} />
+                {task.dueDate || "No due date"}
+              </div>
+            </div>
+          </div>
+
+          {/* Labels */}
+          <div className="border-t border-gray-200 p-6">
+            <p className="mb-3 text-xs font-medium uppercase tracking-wide text-gray-400">
+              Labels
+            </p>
+
+            <div className="flex flex-wrap gap-2">
+              {task.labels?.length ? (
+                task.labels.map((label) => (
+                  <span
+                    key={label}
+                    className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700"
+                  >
+                    {label}
+                  </span>
+                ))
+              ) : (
+                <span className="text-sm text-gray-400">
+                  No labels
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Footer info */}
+          <div className="flex flex-wrap gap-6 border-t border-gray-200 p-6 text-xs text-gray-400">
+            <span className="flex items-center gap-2">
+              <Clock size={14} />
+              Created{" "}
+              {task.createdAt
+                ? new Date(
+                    task.createdAt,
+                  ).toLocaleDateString()
+                : "—"}
+            </span>
+
+            <span className="flex items-center gap-2">
+              <Check size={14} />
+              ID: {task._id || task.id}
+            </span>
+          </div>
+        </div>
+      </div>
+    </AppLayout>
   );
 }
