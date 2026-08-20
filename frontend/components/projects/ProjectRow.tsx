@@ -29,23 +29,43 @@ const statusLabels = {
 export default function ProjectRow({
   project,
 }: ProjectRowProps) {
+  const projectId =
+    project._id || project.id;
+
+  const members = project.members || [];
+
+  const taskCount = project.taskCount || 0;
+
+  const completedTasks =
+    project.completedTasks || 0;
+
   const progress =
-    project.taskCount === 0
+    taskCount === 0
       ? 0
-      : Math.round(
-          (project.completedTasks / project.taskCount) * 100
+      : Math.min(
+          100,
+          Math.round(
+            (completedTasks / taskCount) *
+              100,
+          ),
         );
+
+  const projectHref = projectId
+    ? `/projects/${projectId}`
+    : "/projects";
 
   return (
     <div className="flex items-center gap-4 border-b border-gray-100 px-5 py-4 last:border-b-0">
       {/* Project */}
       <Link
-        href={`/projects/${project.id}`}
+        href={projectHref}
         className="min-w-0 flex-1"
       >
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-sm font-semibold text-gray-700">
-            {project.name.charAt(0).toUpperCase()}
+            {project.name
+              .charAt(0)
+              .toUpperCase()}
           </div>
 
           <div className="min-w-0">
@@ -54,7 +74,8 @@ export default function ProjectRow({
             </h3>
 
             <p className="mt-0.5 truncate text-xs text-gray-400">
-              {project.description}
+              {project.description ||
+                "No description provided"}
             </p>
           </div>
         </div>
@@ -63,7 +84,9 @@ export default function ProjectRow({
       {/* Status */}
       <div className="hidden w-28 shrink-0 sm:block">
         <span
-          className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${statusStyles[project.status]}`}
+          className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${
+            statusStyles[project.status]
+          }`}
         >
           {statusLabels[project.status]}
         </span>
@@ -71,25 +94,38 @@ export default function ProjectRow({
 
       {/* Members */}
       <div className="hidden w-32 shrink-0 md:flex md:items-center md:gap-2">
-        <Users size={15} className="text-gray-400" />
+        <Users
+          size={15}
+          className="text-gray-400"
+        />
 
-        <div className="flex -space-x-2">
-          {project.members
-            .slice(0, 3)
-            .map((member) => (
-              <div
-                key={member}
-                title={member}
-                className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-gray-900 text-[9px] font-medium text-white"
-              >
-                {member.charAt(0).toUpperCase()}
-              </div>
-            ))}
-        </div>
+        {members.length > 0 ? (
+          <>
+            <div className="flex -space-x-2">
+              {members
+                .slice(0, 3)
+                .map((member, index) => (
+                  <div
+                    key={`${member}-${index}`}
+                    title={member}
+                    className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-gray-900 text-[9px] font-medium text-white"
+                  >
+                    {member
+                      .charAt(0)
+                      .toUpperCase()}
+                  </div>
+                ))}
+            </div>
 
-        {project.members.length > 3 && (
+            {members.length > 3 && (
+              <span className="text-[11px] text-gray-400">
+                +{members.length - 3}
+              </span>
+            )}
+          </>
+        ) : (
           <span className="text-[11px] text-gray-400">
-            +{project.members.length - 3}
+            No members
           </span>
         )}
       </div>
@@ -98,7 +134,7 @@ export default function ProjectRow({
       <div className="hidden w-32 shrink-0 lg:block">
         <div className="flex items-center justify-between">
           <span className="text-[11px] text-gray-500">
-            {project.completedTasks}/{project.taskCount}
+            {completedTasks}/{taskCount}
           </span>
 
           <span className="text-[11px] text-gray-400">
@@ -109,7 +145,9 @@ export default function ProjectRow({
         <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-gray-100">
           <div
             className="h-full rounded-full bg-gray-900 transition-all"
-            style={{ width: `${progress}%` }}
+            style={{
+              width: `${progress}%`,
+            }}
           />
         </div>
       </div>
@@ -117,7 +155,8 @@ export default function ProjectRow({
       {/* Due date */}
       <div className="hidden w-24 shrink-0 items-center gap-1.5 text-xs text-gray-500 xl:flex">
         <CalendarDays size={14} />
-        {project.dueDate}
+
+        {project.dueDate || "—"}
       </div>
 
       {/* Actions */}
@@ -129,8 +168,9 @@ export default function ProjectRow({
         <MoreHorizontal size={17} />
       </button>
 
+      {/* Open */}
       <Link
-        href={`/projects/${project.id}`}
+        href={projectHref}
         className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
         aria-label={`Open ${project.name}`}
       >

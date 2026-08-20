@@ -1,10 +1,7 @@
 "use client";
 
 import { ReactNode } from "react";
-
 import Sidebar from "./Sidebar";
-import Header from "./Header";
-import AuthGuard from "../auth/AuthGuard";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -14,25 +11,18 @@ interface AppLayoutProps {
 
 export default function AppLayout({
   children,
-  title,
-  onAdd,
 }: AppLayoutProps) {
   return (
-    <AuthGuard>
-      <div className="flex min-h-screen bg-gray-50">
-        <Sidebar />
+    <div className="min-h-screen bg-gray-50">
+      {/* Fixed Sidebar */}
+      <Sidebar />
 
-        <div className="flex min-w-0 flex-1 flex-col">
-          <Header
-            title={title}
-            onAdd={onAdd}
-          />
-
-          <main className="flex-1 overflow-auto p-6">
-            {children}
-          </main>
-        </div>
+      {/* Main Application Area */}
+      <div className="ml-64 min-h-screen">
+        <main className="min-h-screen overflow-x-auto p-6">
+          {children}
+        </main>
       </div>
-    </AuthGuard>
+    </div>
   );
 }

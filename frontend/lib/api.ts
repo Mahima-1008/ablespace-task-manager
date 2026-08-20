@@ -1,98 +1,70 @@
+import { Task } from "@/types/task";
+import { Project } from "@/types/project";
+
+export type { Task } from "@/types/task";
+export type { Project } from "@/types/project";
+
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   "http://localhost:5001";
-
-export interface Task {
-  _id?: string;
-  id?: string;
-
-  title: string;
-  description?: string;
-
-  status:
-    | "todo"
-    | "doing"
-    | "completed"
-    | "on-hold";
-
-  priority:
-    | "urgent"
-    | "high"
-    | "medium"
-    | "low"
-    | "none";
-
-  assignee?: string;
-  assigneeInitial?: string;
-
-  dueDate?: string;
-
-  labels?: string[];
-
-  projectId?: string | null;
-
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface Project {
-  _id?: string;
-  id?: string;
-
-  name: string;
-  description?: string;
-
-  status:
-    | "active"
-    | "completed"
-    | "on-hold";
-
-  members?: string[];
-
-  taskCount?: number;
-  completedTasks?: number;
-
-  dueDate?: string;
-
-  createdAt?: string;
-  updatedAt?: string;
-}
 
 async function request<T>(
   endpoint: string,
   options?: RequestInit,
 ): Promise<T> {
-  const response = await fetch(
-    `${API_URL}${endpoint}`,
-    {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...(options?.headers || {}),
+  const controller = new AbortController();
+
+  const timeout = setTimeout(() => {
+    controller.abort();
+  }, 10000);
+
+  try {
+    const response = await fetch(
+      `${API_URL}${endpoint}`,
+      {
+        ...options,
+        cache: "no-store",
+        signal: controller.signal,
+        headers: {
+          "Content-Type": "application/json",
+          ...(options?.headers || {}),
+        },
       },
-    },
-  );
+    );
 
-  if (!response.ok) {
-    let message =
-      `Request failed: ${response.status}`;
+    if (!response.ok) {
+      let message = `Request failed: ${response.status}`;
 
-    try {
-      const error = await response.json();
+      try {
+        const error = await response.json();
 
-      if (error?.message) {
-        message = Array.isArray(error.message)
-          ? error.message.join(", ")
-          : error.message;
+        if (error?.message) {
+          message = Array.isArray(error.message)
+            ? error.message.join(", ")
+            : error.message;
+        }
+      } catch {
+        // Ignore JSON parsing errors.
       }
-    } catch {
-      // Ignore JSON parsing errors.
+
+      throw new Error(message);
     }
 
-    throw new Error(message);
-  }
+    return await response.json();
+  } catch (error) {
+    if (
+      error instanceof DOMException &&
+      error.name === "AbortError"
+    ) {
+      throw new Error(
+        "Backend request timed out. Make sure the backend is running on port 5001.",
+      );
+    }
 
-  return response.json();
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 /* =========================
@@ -143,18 +115,14 @@ export async function deleteTask(
    PROJECTS
 ========================= */
 
-export async function getProjects(): Promise<
-  Project[]
-> {
+export async function getProjects(): Promise<Project[]> {
   return request<Project[]>("/projects");
 }
 
 export async function getProject(
   id: string,
 ): Promise<Project> {
-  return request<Project>(
-    `/projects/${id}`,
-  );
+  return request<Project>(`/projects/${id}`);
 }
 
 export async function createProject(

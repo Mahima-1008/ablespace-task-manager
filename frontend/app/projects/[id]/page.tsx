@@ -216,7 +216,7 @@ export default async function ProjectDetailsPage({
             <div>
               {projectTasks.map((task) => (
                 <Link
-                  key={task.id}
+                 key={task._id || task.id}
                   href={`/tasks/${task.id}`}
                   className="flex items-center gap-4 border-b border-gray-100 px-5 py-4 transition last:border-b-0 hover:bg-gray-50"
                 >

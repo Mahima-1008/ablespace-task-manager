@@ -1,10 +1,24 @@
+export type ProjectStatus =
+  | "active"
+  | "completed"
+  | "on-hold";
+
 export interface Project {
-  id: string;
+  _id?: string;
+  id?: string;
+
   name: string;
   description: string;
-  status: "active" | "completed" | "on-hold";
+
+  status: ProjectStatus;
+
   members: string[];
+
   taskCount: number;
   completedTasks: number;
+
   dueDate: string;
+
+  createdAt?: string;
+  updatedAt?: string;
 }

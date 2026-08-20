@@ -5,6 +5,7 @@ import {
   MoreHorizontal,
 } from "lucide-react";
 import Link from "next/link";
+
 import { Task } from "@/types/task";
 
 interface TaskRowProps {
@@ -42,38 +43,63 @@ export default function TaskRow({
   showStatus,
   showReporter,
 }: TaskRowProps) {
+  const taskId = task._id || task.id;
+
+  const labels = task.labels || [];
+
+  const assignee = task.assignee || "Unassigned";
+
+  const assigneeInitial =
+    task.assigneeInitial ||
+    assignee.charAt(0).toUpperCase();
+
+  const taskHref = taskId
+    ? `/tasks/${taskId}`
+    : "/tasks";
+
   return (
     <div className="grid min-w-[760px] grid-cols-[minmax(260px,1.8fr)_140px_150px_150px_60px] items-center border-t border-gray-200 px-3 py-3 text-sm">
       {/* Task */}
       <div className="min-w-0">
         <Link
-          href={`/tasks/${task.id}`}
+          href={taskHref}
           className="block truncate font-medium text-gray-900 hover:text-gray-600"
         >
           {task.title}
         </Link>
 
-        {showLabels && task.labels.length > 0 && (
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {task.labels.map((label, index) => (
-              <span
-                key={`${task.id}-${label}-${index}`}
-                className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-600"
-              >
-                {label}
-              </span>
-            ))}
-          </div>
-        )}
+        {showLabels &&
+          labels.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {labels.map(
+                (label, index) => (
+                  <span
+                    key={`${taskId || "task"}-${label}-${index}`}
+                    className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-600"
+                  >
+                    {label}
+                  </span>
+                ),
+              )}
+            </div>
+          )}
       </div>
 
       {/* Priority */}
       {showPriority ? (
         <div>
           <span
-            className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${priorityStyles[task.priority]}`}
+            className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${
+              priorityStyles[
+                task.priority
+              ]
+            }`}
           >
-            {priorityLabels[task.priority]}
+            {
+              priorityLabels[
+                task.priority
+              ]
+            }
           </span>
         </div>
       ) : (
@@ -83,13 +109,12 @@ export default function TaskRow({
       {/* Members */}
       {showMembers ? (
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-900 text-[11px] font-medium text-white">
-            {task.assigneeInitial ??
-              task.assignee.charAt(0).toUpperCase()}
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-900 text-[11px] font-medium text-white">
+            {assigneeInitial}
           </div>
 
           <span className="truncate text-xs text-gray-600">
-            {task.assignee}
+            {assignee}
           </span>
         </div>
       ) : (
@@ -102,7 +127,7 @@ export default function TaskRow({
           <CalendarDays size={14} />
 
           <span className="text-xs">
-            {task.dueDate}
+            {task.dueDate || "—"}
           </span>
         </div>
       ) : (
@@ -120,16 +145,17 @@ export default function TaskRow({
         </button>
       </div>
 
-      {/* These will be used when those fields are implemented */}
+      {/* Status */}
       {showStatus && (
         <span className="hidden">
           {task.status}
         </span>
       )}
 
+      {/* Reporter */}
       {showReporter && (
         <span className="hidden">
-          {task.assignee}
+          {assignee}
         </span>
       )}
     </div>

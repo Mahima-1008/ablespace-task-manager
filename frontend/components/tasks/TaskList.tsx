@@ -84,7 +84,7 @@ export default function TaskList({
               {/* Rows */}
               {groupTasks.map((task) => (
                 <TaskRow
-                  key={task.id}
+                  key={task._id || task.id}
                   task={task}
                   showPriority={visibleFields.priority}
                   showMembers={visibleFields.members}

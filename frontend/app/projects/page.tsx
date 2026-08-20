@@ -1,32 +1,62 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import {
-  ArrowLeft,
-  Calendar,
-  Check,
-  Trash2,
-  Users,
-} from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 import AppLayout from "@/components/layout/AppLayout";
+import AddProjectModal from "@/components/projects/AddProjectModal";
+import ProjectList from "@/components/projects/ProjectList";
 
 import {
-  deleteProject,
-  getProject,
-  updateProject,
-  Project,
+  createProject,
+  getProjects,
 } from "@/lib/api";
 
-export default function ProjectDetailsPage() {
-  const params = useParams();
-  const router = useRouter();
+import { Project } from "@/types/project";
 
-  const id = params.id as string;
+function normalizeProject(
+  project: {
+    _id?: string;
+    id?: string;
+    name: string;
+    description?: string;
+    status: "active" | "completed" | "on-hold";
+    members?: string[];
+    taskCount?: number;
+    completedTasks?: number;
+    dueDate?: string;
+  },
+): Project {
+  return {
+    id:
+      project.id ??
+      project._id ??
+      crypto.randomUUID(),
 
-  const [project, setProject] =
-    useState<Project | null>(null);
+    name: project.name,
+
+    description:
+      project.description ?? "",
+
+    status: project.status,
+
+    members:
+      project.members ?? [],
+
+    taskCount:
+      project.taskCount ?? 0,
+
+    completedTasks:
+      project.completedTasks ?? 0,
+
+    dueDate:
+      project.dueDate ?? "",
+  };
+}
+
+export default function ProjectsPage() {
+  const [allProjects, setAllProjects] =
+    useState<Project[]>([]);
 
   const [loading, setLoading] =
     useState(true);
@@ -34,123 +64,142 @@ export default function ProjectDetailsPage() {
   const [error, setError] =
     useState("");
 
+  const [search, setSearch] =
+    useState("");
+
+  const [showAddProject, setShowAddProject] =
+    useState(false);
+
+  /* =========================
+     LOAD PROJECTS
+  ========================= */
+
   useEffect(() => {
-    async function loadProject() {
+    async function loadProjects() {
       try {
         setLoading(true);
         setError("");
 
-        const data = await getProject(id);
+        const data = await getProjects();
 
-        setProject(data);
+        setAllProjects(
+          data.map(normalizeProject),
+        );
       } catch (err) {
-        console.error(err);
+        console.error(
+          "Failed to load projects:",
+          err,
+        );
 
         setError(
-          "Project could not be loaded.",
+          "Unable to load projects. Make sure the backend is running on port 5001.",
         );
       } finally {
         setLoading(false);
       }
     }
 
-    if (id) {
-      loadProject();
+    loadProjects();
+  }, []);
+
+  /* =========================
+     SEARCH
+  ========================= */
+
+  const filteredProjects = useMemo(() => {
+    const query =
+      search.trim().toLowerCase();
+
+    if (!query) {
+      return allProjects;
     }
-  }, [id]);
 
-  async function handleStatusChange(
-    status: Project["status"],
-  ) {
-    if (!project) return;
+    return allProjects.filter(
+      (project) => {
+        return (
+          project.name
+            .toLowerCase()
+            .includes(query) ||
+          project.description
+            .toLowerCase()
+            .includes(query) ||
+          project.members.some(
+            (member) =>
+              member
+                .toLowerCase()
+                .includes(query),
+          )
+        );
+      },
+    );
+  }, [allProjects, search]);
 
+  /* =========================
+     CREATE PROJECT
+  ========================= */
+
+  const handleCreateProject = async (
+    newProject: Project,
+  ) => {
     try {
       setError("");
 
-      const updated =
-        await updateProject(id, {
-          status,
-        });
+      const createdProject =
+        await createProject(
+          newProject,
+        );
 
-      setProject(updated);
+      const normalizedProject =
+        normalizeProject(
+          createdProject,
+        );
+
+      setAllProjects(
+        (currentProjects) => [
+          normalizedProject,
+          ...currentProjects,
+        ],
+      );
+
+      setShowAddProject(false);
     } catch (err) {
-      console.error(err);
+      console.error(
+        "Failed to create project:",
+        err,
+      );
 
       setError(
-        "Unable to update project.",
+        "Unable to create project. Please try again.",
       );
     }
-  }
-
-  async function handleDelete() {
-    if (!project) return;
-
-    const confirmed =
-      window.confirm(
-        "Are you sure you want to delete this project?",
-      );
-
-    if (!confirmed) return;
-
-    try {
-      await deleteProject(id);
-
-      router.push("/projects");
-    } catch (err) {
-      console.error(err);
-
-      setError(
-        "Unable to delete project.",
-      );
-    }
-  }
-
-  if (loading) {
-    return (
-      <AppLayout title="Project Details">
-        <div className="flex min-h-[400px] items-center justify-center">
-          <p className="text-sm text-gray-500">
-            Loading project...
-          </p>
-        </div>
-      </AppLayout>
-    );
-  }
-
-  if (!project) {
-    return (
-      <AppLayout title="Project Details">
-        <div className="rounded-xl border border-gray-200 bg-white p-10 text-center">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Project not found
-          </h2>
-
-          <button
-            onClick={() =>
-              router.push("/projects")
-            }
-            className="mt-4 text-sm font-medium text-gray-900 underline"
-          >
-            Back to projects
-          </button>
-        </div>
-      </AppLayout>
-    );
-  }
+  };
 
   return (
-    <AppLayout title="Project Details">
-      <div className="space-y-6">
-        {/* Back */}
-        <button
-          onClick={() =>
-            router.push("/projects")
-          }
-          className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900"
-        >
-          <ArrowLeft size={16} />
-          Back to Projects
-        </button>
+    <AppLayout title="Projects">
+      <div className="mx-auto w-full max-w-[1600px] space-y-6">
+        {/* Heading */}
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-xl font-semibold text-gray-900">
+              Projects
+            </h1>
+
+            <p className="mt-1 text-sm text-gray-500">
+              Manage and track all your projects.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() =>
+              setShowAddProject(true)
+            }
+            className="flex h-10 items-center gap-2 rounded-lg bg-gray-900 px-4 text-sm font-medium text-white transition hover:bg-gray-800"
+          >
+            <Plus size={17} />
+            Add Project
+          </button>
+        </div>
 
         {/* Error */}
         {error && (
@@ -159,196 +208,90 @@ export default function ProjectDetailsPage() {
           </div>
         )}
 
-        {/* Main Card */}
-        <div className="rounded-xl border border-gray-200 bg-white">
-          {/* Header */}
-          <div className="flex flex-wrap items-start justify-between gap-4 border-b border-gray-200 p-6">
-            <div>
-              <h1 className="text-2xl font-semibold text-gray-900">
-                {project.name}
-              </h1>
+        {/* Search */}
+        <div className="relative max-w-md">
+          <Search
+            size={18}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+          />
 
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-500">
-                {project.description ||
-                  "No description provided."}
-              </p>
-            </div>
+          <input
+            type="text"
+            value={search}
+            onChange={(event) =>
+              setSearch(event.target.value)
+            }
+            placeholder="Search projects..."
+            className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-10 pr-10 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-400 focus:ring-1 focus:ring-gray-100"
+          />
 
+          {search && (
             <button
-              onClick={handleDelete}
-              className="flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50"
+              type="button"
+              onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+              aria-label="Clear search"
             >
-              <Trash2 size={16} />
-              Delete
+              <X size={15} />
             </button>
-          </div>
-
-          {/* Properties */}
-          <div className="grid gap-6 p-6 md:grid-cols-2">
-            {/* Status */}
-            <div>
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">
-                Status
-              </p>
-
-              <select
-                value={project.status}
-                onChange={(event) =>
-                  handleStatusChange(
-                    event.target
-                      .value as Project["status"],
-                  )
-                }
-                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none"
-              >
-                <option value="active">
-                  Active
-                </option>
-
-                <option value="completed">
-                  Completed
-                </option>
-
-                <option value="on-hold">
-                  On Hold
-                </option>
-              </select>
-            </div>
-
-            {/* Due Date */}
-            <div>
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">
-                Due Date
-              </p>
-
-              <div className="flex h-10 items-center gap-2 rounded-lg border border-gray-200 px-3 text-sm text-gray-700">
-                <Calendar size={16} />
-
-                {project.dueDate ||
-                  "No due date"}
-              </div>
-            </div>
-
-            {/* Tasks */}
-            <div>
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">
-                Tasks
-              </p>
-
-              <div className="flex h-10 items-center gap-2 rounded-lg border border-gray-200 px-3 text-sm text-gray-700">
-                <Check size={16} />
-
-                {project.completedTasks || 0}
-                {" / "}
-                {project.taskCount || 0}
-                {" completed"}
-              </div>
-            </div>
-
-            {/* Members */}
-            <div>
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">
-                Members
-              </p>
-
-              <div className="flex min-h-10 items-center gap-2 rounded-lg border border-gray-200 px-3 py-2">
-                <Users
-                  size={16}
-                  className="shrink-0 text-gray-500"
-                />
-
-                <div className="flex flex-wrap gap-2">
-                  {project.members?.length ? (
-                    project.members.map(
-                      (member) => (
-                        <span
-                          key={member}
-                          className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700"
-                        >
-                          {member}
-                        </span>
-                      ),
-                    )
-                  ) : (
-                    <span className="text-sm text-gray-400">
-                      No members
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Progress */}
-          <div className="border-t border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-gray-900">
-                Project Progress
-              </p>
-
-              <p className="text-sm text-gray-500">
-                {project.taskCount
-                  ? Math.round(
-                      ((project.completedTasks ||
-                        0) /
-                        project.taskCount) *
-                        100,
-                    )
-                  : 0}
-                %
-              </p>
-            </div>
-
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-gray-100">
-              <div
-                className="h-full rounded-full bg-gray-900 transition-all"
-                style={{
-                  width: `${
-                    project.taskCount
-                      ? Math.min(
-                          100,
-                          Math.round(
-                            ((project.completedTasks ||
-                              0) /
-                              project.taskCount) *
-                              100,
-                          ),
-                        )
-                      : 0
-                  }%`,
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="flex flex-wrap gap-6 border-t border-gray-200 p-6 text-xs text-gray-400">
-            <span>
-              Project ID:{" "}
-              {project._id ||
-                project.id}
-            </span>
-
-            {project.createdAt && (
-              <span>
-                Created:{" "}
-                {new Date(
-                  project.createdAt,
-                ).toLocaleDateString()}
-              </span>
-            )}
-
-            {project.updatedAt && (
-              <span>
-                Updated:{" "}
-                {new Date(
-                  project.updatedAt,
-                ).toLocaleDateString()}
-              </span>
-            )}
-          </div>
+          )}
         </div>
+
+        {/* Loading */}
+        {loading ? (
+          <div className="rounded-xl border border-gray-200 bg-white p-12 text-center">
+            <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-gray-200 border-t-gray-900" />
+
+            <p className="mt-3 text-sm text-gray-500">
+              Loading projects...
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Project list */}
+            {filteredProjects.length > 0 ? (
+              <ProjectList
+                projects={filteredProjects}
+              />
+            ) : (
+              <div className="rounded-xl border border-gray-200 bg-white p-12 text-center">
+                <h3 className="text-base font-semibold text-gray-900">
+                  No projects found
+                </h3>
+
+                <p className="mt-2 text-sm text-gray-500">
+                  {search
+                    ? "Try changing your search."
+                    : "Create your first project to get started."}
+                </p>
+
+                {!search && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowAddProject(true)
+                    }
+                    className="mt-5 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-800"
+                  >
+                    Add Project
+                  </button>
+                )}
+              </div>
+            )}
+          </>
+        )}
       </div>
+
+      {/* Add Project Modal */}
+      <AddProjectModal
+        isOpen={showAddProject}
+        onClose={() =>
+          setShowAddProject(false)
+        }
+        onCreateProject={
+          handleCreateProject
+        }
+      />
     </AppLayout>
   );
 }
